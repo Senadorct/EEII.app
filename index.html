@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EII - App de Seguimiento</title>
+    <!-- Importar Supabase V2 vía CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --color-primary: #0284c7;
+            --color-primary-hover: #0369a1;
+            --color-primary-active: #075985;
+            --color-success: #16a34a;
+            --color-warning: #ea580c;
+            --color-error: #dc2626;
+            --color-info: #0891b2;
+            --color-bg: #f9fafb;
+            --color-surface: #ffffff;
+            --color-border: #e5e7eb;
+            --color-text: #111827;
+            --color-text-secondary: #6b7280;
+            --color-text-muted: #9ca3af;
+            --space-xs: 0.5rem;
+            --space-sm: 0.75rem;
+            --space-md: 1rem;
+            --space-lg: 1.5rem;
+            --space-xl: 2rem;
+            --space-2xl: 3rem;
+            --radius: 8px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--space-lg);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--color-primary) 0%, #0369a1 100%);
+            color: white;
+            padding: var(--space-2xl) var(--space-lg);
+            border-radius: var(--radius);
+            margin-bottom: var(--space-2xl);
+            box-shadow: var(--shadow-md);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: var(--space-sm);
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-xl);
+            border-bottom: 2px solid var(--color-border);
+            overflow-x: auto;
+            padding-bottom: var(--space-md);
+        }
+
+        .tab-btn {
+            padding: var(--space-md) var(--space-lg);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--color-text);
+            background-color: rgba(2, 132, 199, 0.05);
+        }
+
+        .tab-btn.active {
+            color: var(--color-primary);
+            border-bottom-color: var(--color-primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section {
+            background: var(--color-surface);
+            border-radius: var(--radius);
+            padding: var(--space-xl);
+            margin-bottom: var(--space-xl);
+            border: 1px solid var(--color-border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: var(--space-lg);
+            color: var(--color-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+
+        .form-group {
+            margin-bottom: var(--space-lg);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: var(--space-sm);
+            font-weight: 500;
+            color: var(--color-text);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: var(--space-md);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-lg);
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-md) var(--space-lg);
+            border: none;
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            gap: var(--space-sm);
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background-color: var(--color-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--color-primary-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background-color: rgba(2, 132, 199, 0.1);
+            color: var(--color-primary);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(2, 132, 199, 0.2);
+        }
+
+        .btn-small {
+            padding: var(--space-sm) var(--space-md);
+            font-size: 0.85rem;
+        }
+
+        .btn-success {
+            background-color: var(--color-success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #15803d;
+        }
+
+        .btn-warning {
+            background-color: var(--color-warning);
+            color: white;
+        }
+
+        .btn-error {
+            background-color: var(--color-error);
+            color: white;
+        }
+
+        .card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-lg);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: var(--color-primary);
+        }
+
+        .card-title {
+            font-weight: 600;
+            margin-bottom: var(--space-md);
+            color: var(--color-text);
+        }
+
+        .card-text {
+            color: var(--color-text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .score-badge {
+            display: inline-block;
+            padding: var(--space-sm) var(--space-md);
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .score-remission {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .score-mild {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .score-moderate {
+            background-color: #fed7aa;
+            color: #9a3412;
+        }
+
+        .score-severe {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .alert {
+            padding: var(--space-lg);
+            border-radius: var(--radius);
+            margin-bottom: var(--space-lg);
+            border-left: 4px solid;
+            display: flex;
+            gap: var(--space-md);
+            align-items: flex-start;
+        }
+
+        .alert-info {
+            background-color: #eff6ff;
+            border-color: var(--color-info);
+            color: #164e63;
+        }
+
+        .alert-warning {
+            background-color: #fffbeb;
+            border-color: var(--color-warning);
+            color: #78350f;
+        }
+
+        .alert-error {
+            background-color: #fef2f2;
+            border-color: var(--color-error);
+            color: #7f1d1d;
+        }
+
+        .alert-success {
+            background-color: #f0fdf4;
+            border-color: var(--color-success);
+            color: #166534;
+        }
+
+        .alert-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--color-surface);
+            border-radius: var(--radius);
+            padding: var(--space-2xl);
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: var(--space-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--color-text-secondary);
+        }
+
+        .radio-group,
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+
+        .radio-item,
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+
+        .radio-item input[type="radio"],
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .radio-item label,
+        .checkbox-item label {
+            margin: 0;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .medication-list {
+            list-style: none;
+        }
+
+        .medication-item {
+            background: var(--color-bg);
+            padding: var(--space-md);
+            border-radius: var(--radius);
+            margin-bottom: var(--space-md);
+            border-left: 3px solid var(--color-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .medication-info {
+            flex: 1;
+        }
+
+        .medication-name {
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .medication-details {
+            font-size: 0.85rem;
+            color: var(--color-text-secondary);
+        }
+
+        .chart-container {
+            background: var(--color-bg);
+            padding: var(--space-lg);
+            border-radius: var(--radius);
+            margin-top: var(--space-lg);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-lg);
+            margin-bottom: var(--space-xl);
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.1) 0%, rgba(2, 132, 199, 0.05) 100%);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            padding: var(--space-lg);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--color-primary);
+            margin-bottom: var(--space-sm);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--color-text-secondary);
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: var(--color-border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: var(--space-md);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--color-primary), var(--color-info));
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: var(--space-2xl);
+            color: var(--color-text-secondary);
+        }
+
+        .spinner {
+            border: 3px solid var(--color-border);
+            border-top: 3px solid var(--color-primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--space-md);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .legend {
+            display: flex;
+            gap: var(--space-lg);
+            flex-wrap: wrap;
+            margin-top: var(--space-lg);
+            font-size: 0.85rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Seguimiento EII</h1>
+            <p>App de control para Colitis Ulcerosa y Enfermedad de Crohn</p>
+        </div>
+
+        <!-- Sistema de autenticación -->
+        <div id="auth-screen" class="section">
+            <div style="text-align: center; max-width: 500px; margin: 0 auto;">
+                <h2 style="margin-bottom: var(--space-lg);">Acceso Seguro</h2>
+                <div class="form-group">
+                    <label>Código de acceso asignado por tu médico:</label>
+                    <input type="text" id="auth-code" placeholder="Ej: ABC-12345-XYZ" style="font-size: 1.1rem; letter-spacing: 2px;">
+                </div>
+                <button class="btn btn-primary" onclick="authenticate()" id="btn-login" style="width: 100%; margin-top: var(--space-lg);">
+                    Acceder
+                </button>
+                <p style="margin-top: var(--space-lg); color: var(--color-text-secondary); font-size: 0.85rem;">
+                    ℹ️ Por tu privacidad, accedes solo con código alfanumérico. No usamos correo ni datos personales.
+                </p>
+            </div>
+        </div>
+
+        <!-- Pantalla principal -->
+        <div id="app-screen" class="hidden">
+            <!-- Bienvenida -->
+            <div style="background: linear-gradient(135deg, rgba(2, 132, 199, 0.1) 0%, rgba(2, 132, 199, 0.05) 100%); padding: var(--space-lg); border-radius: var(--radius); margin-bottom: var(--space-xl); border-left: 4px solid var(--color-primary);">
+                <h2 id="welcome-msg" style="margin-bottom: var(--space-sm); color: var(--color-primary);">Bienvenido 👋</h2>
+                <p id="profile-summary" style="color: var(--color-text-secondary); margin-bottom: var(--space-md);"></p>
+                <button class="btn btn-secondary btn-small" onclick="openProfileModal();">Ver/Editar Perfil</button>
+            </div>
+
+            <!-- Tabs de navegación -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('dashboard');">📊 Panel</button>
+                <button class="tab-btn" onclick="switchTab('medication');">💊 Medicación</button>
+                <button class="tab-btn" onclick="switchTab('scores');">📈 Scores</button>
+                <button class="tab-btn" onclick="switchTab('quality');">❤️ Calidad Vida</button>
+                <button class="tab-btn" onclick="switchTab('history');">📋 Historial</button>
+            </div>
+
+            <!-- Tab: Dashboard -->
+            <div id="dashboard" class="tab-content active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="adherence-stat">0%</div>
+                        <div class="stat-label">Adherencia últimos 30d</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="last-score-stat">-</div>
+                        <div class="stat-label">Último score actividad</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="quality-stat">-</div>
+                        <div class="stat-label">Calidad de vida (IBDQ-9)</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">📅 Actividades Recientes</div>
+                    <div id="recent-activities" style="color: var(--color-text-secondary);">
+                        <p>Cargando actividades...</p>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">⚠️ Alertas para tu médico</div>
+                    <div id="alerts-list" style="color: var(--color-text-secondary);">
+                        <p>Sin alertas activas. ¡Sigue así!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Medicación -->
+            <div id="medication" class="tab-content">
+                <div class="section">
+                    <div class="section-title">💊 Medicación de Mantenimiento</div>
+                    <button class="btn btn-primary" onclick="openMedicationModal('maintenance');">+ Agregar Medicación</button>
+                    <ul class="medication-list" id="maintenance-list" style="margin-top: var(--space-lg);">
+                        <li style="text-align: center; color: var(--color-text-secondary);">Cargando...</li>
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🧬 Tratamiento Biológico</div>
+                    <button class="btn btn-primary" onclick="openMedicationModal('biologic');">+ Agregar Biológico</button>
+                    <ul class="medication-list" id="biologic-list" style="margin-top: var(--space-lg);">
+                        <li style="text-align: center; color: var(--color-text-secondary);">Cargando...</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Tab: Scores -->
+            <div id="scores" class="tab-content">
+                <div id="score-mayo" class="hidden">
+                    <div class="section">
+                        <div class="section-title">📊 Mayo Simplificado (Colitis Ulcerosa)</div>
+                        <p style="margin-bottom: var(--space-lg); color: var(--color-text-secondary);">Puntuación: 0–6</p>
+                        
+                        <form id="mayo-form" onsubmit="submitMayoScore(event)">
+                            <div class="form-group">
+                                <label>Número de deposiciones (vs. habitual):</label>
+                                <div class="radio-group">
+                                    <div class="radio-item">
+                                        <input type="radio" name="mayo-stools" value="0" id="mayo-s0" checked>
+                                        <label for="mayo-s0"><strong>0:</strong> Normal</label>
+                                    </div>
+                                    <div class="radio-item">
+                                        <input type="radio" name="mayo-stools" value="1" id="mayo-s1">
+                                        <label for="mayo-s1"><strong>1:</strong> +1-2 deposiciones/día</label>
+                                    </div>
+                                    <div class="radio-item">
+                                        <input type="radio" name="mayo-stools" value="2" id="mayo-s2">
+                                        <label for="mayo-s2"><strong>2:</strong> +3-4 deposiciones/día</label>
+                                    </div>
+                                    <div class="radio-item">
+                                        <input type="radio" name="mayo-stools" value="3" id="mayo-s3">
+                                        <label for="mayo-s3"><strong>3:</strong> ≥5 deposiciones/día</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Sangre en heces:</label>
+                                <div class="radio-group">
+                                    <div class="radio-item">
+                                        <input type="radio" name="mayo-blood" value="0" id="mayo-b0" checked>
+                                        <label for="mayo-b0"><strong>0:</strong> Ausente</label>
+                                    </div>
+                                    <div class="radio-item">
+                                        <input type="radio" name="mayo-blood" value="1" id="mayo-b1">
+                                        <label for="mayo-b1"><strong>1:</strong> Trazas</label>
+                                    </div>
+                                    <div class="radio-item">
+                                        <input type="radio" name="mayo-blood" value="2" id="mayo-b2">
+                                        <label for="mayo-b2"><strong>2:</strong> Evidente</label>
+                                    </div>
+                                    <div class="radio-item">
+                                        <input type="radio" name="mayo-blood" value="3" id="mayo-b3">
+                                        <label for="mayo-b3"><strong>3:</strong> Predomina sangre</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" id="btn-mayo">Guardar Score Mayo</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="score-hbi" class="hidden">
+                    <div class="section">
+                        <div class="section-title">📊 Harvey-Bradshaw Index (Crohn)</div>
+                        <p style="margin-bottom: var(--space-lg); color: var(--color-text-secondary);">Escala validada para actividad de Crohn</p>
+                        
+                        <form id="hbi-form" onsubmit="submitHBIScore(event)">
+                            <div class="form-group">
+                                <label>Bienestar general (últimas 24h):</label>
+                                <div class="radio-group">
+                                    <div class="radio-item"><input type="radio" name="hbi-wellbeing" value="0" id="hbi-w0" checked><label for="hbi-w0"><strong>0:</strong> Muy bien</label></div>
+                                    <div class="radio-item"><input type="radio" name="hbi-wellbeing" value="1" id="hbi-w1"><label for="hbi-w1"><strong>1:</strong> Bien</label></div>
+                                    <div class="radio-item"><input type="radio" name="hbi-wellbeing" value="2" id="hbi-w2"><label for="hbi-w2"><strong>2:</strong> Regular</label></div>
+                                    <div class="radio-item"><input type="radio" name="hbi-wellbeing" value="3" id="hbi-w3"><label for="hbi-w3"><strong>3:</strong> Mal</label></div>
+                                    <div class="radio-item"><input type="radio" name="hbi-wellbeing" value="4" id="hbi-w4"><label for="hbi-w4"><strong>4:</strong> Pésimo</label></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Dolor abdominal (últimas 24h):</label>
+                                <div class="radio-group">
+                                    <div class="radio-item"><input type="radio" name="hbi-pain" value="0" id="hbi-p0" checked><label for="hbi-p0"><strong>0:</strong> Ninguno</label></div>
+                                    <div class="radio-item"><input type="radio" name="hbi-pain" value="1" id="hbi-p1"><label for="hbi-p1"><strong>1:</strong> Leve</label></div>
+                                    <div class="radio-item"><input type="radio" name="hbi-pain" value="2" id="hbi-p2"><label for="hbi-p2"><strong>2:</strong> Moderado</label></div>
+                                    <div class="radio-item"><input type="radio" name="hbi-pain" value="3" id="hbi-p3"><label for="hbi-p3"><strong>3:</strong> Intenso</label></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>¿Número de deposiciones líquidas/blandas hoy?</label>
+                                <input type="number" name="hbi-stools" min="0" value="0" style="width: 100px;">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Masa abdominal:</label>
+                                <div class="radio-group">
+                                    <div class="radio-item"><input type="radio" name="hbi-mass" value="0" id="hbi-m0" checked><label for="hbi-m0"><strong>0:</strong> Ausente</label></div>
+                                    <div class="radio-item"><input type="radio" name="hbi-mass" value="1" id="hbi-m1"><label for="hbi-m1"><strong>1:</strong> Dudosa</label></div>
+                                    <div class="radio-item"><input type="radio" name="hbi-mass" value="2" id="hbi-m2"><label for="hbi-m2"><strong>2:</strong> Definida</label></div>
+                                    <div class="radio-item"><input type="radio" name="hbi-mass" value="3" id="hbi-m3"><label for="hbi-m3"><strong>3:</strong> Definida + dolor</label></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Complicaciones presentes:</label>
+                                <div class="checkbox-group">
+                                    <div class="checkbox-item"><input type="checkbox" name="hbi-complications" value="perianal"><label>Perianal</label></div>
+                                    <div class="checkbox-item"><input type="checkbox" name="hbi-complications" value="uveitis"><label>Uveítis</label></div>
+                                    <div class="checkbox-item"><input type="checkbox" name="hbi-complications" value="arthritis"><label>Artritis</label></div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" id="btn-hbi">Guardar Score HBI</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">📋 Historial de Scores</div>
+                    <div id="scores-history" style="color: var(--color-text-secondary);">
+                        <p>Cargando scores...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Calidad de Vida -->
+            <div id="quality" class="tab-content">
+                <div class="section">
+                    <div class="section-title">❤️ IBDQ-9 (Calidad de Vida)</div>
+                    <p style="margin-bottom: var(--space-lg); color: var(--color-text-secondary);">Cuestionario mensual. Escala 1-7 (1=siempre/muy grave, 7=nunca/sin problema)</p>
+                    
+                    <form id="ibdq-form" onsubmit="submitIBDQScore(event)">
+                        <div id="ibdq-items"></div>
+                        <button type="submit" class="btn btn-primary" style="margin-top: var(--space-lg);" id="btn-ibdq">Guardar Cuestionario</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tab: Historial -->
+            <div id="history" class="tab-content">
+                <div class="section">
+                    <div class="section-title">📋 Datos</div>
+                    <p>Estos datos se sincronizan automáticamente con tu médico.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Perfil -->
+    <div id="profile-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Perfil Demográfico</span>
+                <button class="modal-close" onclick="closeProfileModal();">✕</button>
+            </div>
+            <form id="profile-form" onsubmit="saveProfile(event)">
+                <div class="form-group">
+                    <label>Año de nacimiento:</label>
+                    <input type="number" id="birth-year" min="1920" max="2026" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Género:</label>
+                    <select id="gender" required>
+                        <option value="">-- Selecciona --</option>
+                        <option value="male">Hombre</option>
+                        <option value="female">Mujer</option>
+                        <option value="nonbinary">No binario</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Diagnóstico principal:</label>
+                    <select id="diagnosis" required onchange="updateDiagnosisFields()">
+                        <option value="">-- Selecciona --</option>
+                        <option value="UC">Colitis Ulcerosa (CU)</option>
+                        <option value="CD">Enfermedad de Crohn (EC)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="extent-group">
+                    <label>Extensión:</label>
+                    <select id="extent" required>
+                        <option value="">-- Selecciona --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Año de diagnóstico:</label>
+                    <input type="number" id="diagnosis-year" min="1990" max="2026" required>
+                </div>
+
+                <div class="form-group" id="perianal-group" class="hidden">
+                    <label>¿Tienes enfermedad perianal activa?</label>
+                    <div class="radio-group">
+                        <div class="radio-item"><input type="radio" name="perianal" value="no" checked><label>No</label></div>
+                        <div class="radio-item"><input type="radio" name="perianal" value="yes"><label>Sí</label></div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: var(--space-md); margin-top: var(--space-xl);">
+                    <button type="submit" class="btn btn-primary" id="btn-save-profile">Guardar en la nube</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeProfileModal();">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Medicación -->
+    <div id="medication-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="med-modal-title">Agregar Medicación</span>
+                <button class="modal-close" onclick="closeMedicationModal();">✕</button>
+            </div>
+            <form id="medication-form" onsubmit="saveMedication(event)">
+                <input type="hidden" id="med-type" value="">
+                
+                <div class="form-group">
+                    <label>Nombre del fármaco:</label>
+                    <input type="text" id="med-name" required placeholder="Ej: Mesalazina, Infliximab...">
+                </div>
+
+                <div class="form-group">
+                    <label>Dosis (Ej: 2):</label>
+                    <input type="number" id="med-dose" step="0.1" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Unidad:</label>
+                    <select id="med-dose-unit">
+                        <option value="g">g</option>
+                        <option value="mg">mg</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Frecuencia:</label>
+                    <select id="med-frequency">
+                        <option value="daily">Diaria</option>
+                        <option value="weekly">Semanal</option>
+                        <option value="monthly">Mensual</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Fecha de inicio:</label>
+                    <input type="date" id="med-start-date" required>
+                </div>
+
+                <div style="display: flex; gap: var(--space-md); margin-top: var(--space-xl);">
+                    <button type="submit" class="btn btn-primary" id="btn-save-med">Guardar Medicación</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeMedicationModal();">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 🚨 CONFIGURACIÓN DE SUPABASE 🚨
+        // Pega aquí las claves de tu proyecto Supabase
+        // ==========================================
+        const SUPABASE_URL = 'https://pbctydgfoeukytdhakju.supabase.co'; // 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBiY3R5ZGdmb2V1a3l0ZGhha2p1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDgzNTMsImV4cCI6MjA4ODU4NDM1M30.lvzlyp5msvZwmYU_T5JyUATJaHHiLXO4huP2BBnTF6w'; //
+        
+        // Inicializar cliente Supabase V2 [web:39, web:38]
+        const { createClient } = supabase;
+        const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ==========================================
+        // ESTADO GLOBAL DE LA APP
+        // ==========================================
+        const app = {
+            patientDbId: null, // El UUID interno de Supabase
+            accessCode: null,  // El código que pone el paciente
+            profile: null,
+            medications: [],
+            scores: [],
+            ibdq: []
+        };
+
+        // ==========================================
+        // AUTENTICACIÓN Y CARGA DE DATOS
+        // ==========================================
+        async function authenticate() {
+            const code = document.getElementById('auth-code').value.trim();
+            if (!code) return alert('Ingresa tu código');
+
+            document.getElementById('btn-login').innerText = "Conectando...";
+            document.getElementById('btn-login').disabled = true;
+
+            try {
+                // 1. Buscar paciente en Supabase
+                const { data: patient, error } = await db
+                    .from('patients')
+                    .select('*')
+                    .eq('access_code', code)
+                    .single();
+
+                if (error && error.code === 'PGRST116') {
+                    // Si no existe, creamos el perfil inicial vacío
+                    const { data: newPatient, error: insertError } = await db
+                        .from('patients')
+                        .insert([{ access_code: code }])
+                        .select()
+                        .single();
+                        
+                    if (insertError) throw insertError;
+                    
+                    app.patientDbId = newPatient.id;
+                    app.accessCode = code;
+                    alert('Código nuevo registrado. Completa tu perfil.');
+                    
+                } else if (patient) {
+                    app.patientDbId = patient.id;
+                    app.accessCode = code;
+                    
+                    // Si ya tenía datos guardados, los cargamos en memoria
+                    if (patient.diagnosis) {
+                        app.profile = {
+                            birthYear: patient.birth_year,
+                            gender: patient.gender,
+                            diagnosis: patient.diagnosis,
+                            extent: patient.extent,
+                            diagnosisYear: patient.diagnosis_year,
+                            perianal: patient.has_perianal
+                        };
+                    }
+                }
+
+                // Cambiar de pantalla
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('app-screen').classList.remove('hidden');
+                
+                // Cargar resto de datos de Supabase
+                await fetchAllData();
+                
+                // Actualizar interfaz
+                updateDashboard();
+                initIBDQ();
+
+            } catch (err) {
+                alert('Error conectando a la base de datos: ' + err.message);
+            } finally {
+                document.getElementById('btn-login').innerText = "Acceder";
+                document.getElementById('btn-login').disabled = false;
+            }
+        }
+
+        async function fetchAllData() {
+            // Medicaciones
+            const { data: meds } = await db
+                .from('medications')
+                .select('*')
+                .eq('patient_id', app.patientDbId);
+            if (meds) app.medications = meds;
+
+            // Scores
+            const { data: scores } = await db
+                .from('activity_scores')
+                .select('*')
+                .eq('patient_id', app.patientDbId)
+                .order('recorded_at', { ascending: false });
+            if (scores) app.scores = scores;
+
+            // IBDQ
+            const { data: ibdq } = await db
+                .from('ibdq_scores')
+                .select('*')
+                .eq('patient_id', app.patientDbId)
+                .order('recorded_at', { ascending: false });
+            if (ibdq) app.ibdq = ibdq;
+
+            renderMedications();
+            renderScoresHistory();
+        }
+
+        // ==========================================
+        // GESTIÓN DE PERFIL EN LA NUBE
+        // ==========================================
+        function openProfileModal() {
+            if (app.profile) {
+                document.getElementById('birth-year').value = app.profile.birthYear;
+                document.getElementById('gender').value = app.profile.gender;
+                document.getElementById('diagnosis').value = app.profile.diagnosis;
+                document.getElementById('diagnosis-year').value = app.profile.diagnosisYear;
+                updateDiagnosisFields();
+                document.getElementById('extent').value = app.profile.extent;
+            }
+            document.getElementById('profile-modal').classList.add('active');
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profile-modal').classList.remove('active');
+        }
+
+        function updateDiagnosisFields() {
+            const diagnosis = document.getElementById('diagnosis').value;
+            const extentSelect = document.getElementById('extent');
+            const perianal = document.getElementById('perianal-group');
+            
+            extentSelect.innerHTML = '<option value="">-- Selecciona --</option>';
+            
+            if (diagnosis === 'UC') {
+                extentSelect.innerHTML += `
+                    <option value="proctitis">Proctitis</option>
+                    <option value="left-sided">Colitis izquierda</option>
+                    <option value="pancolitis">Pancolitis</option>
+                `;
+                perianal.classList.add('hidden');
+            } else if (diagnosis === 'CD') {
+                extentSelect.innerHTML += `
+                    <option value="ileal">Ileal</option>
+                    <option value="colonic">Colónica</option>
+                    <option value="ileocolonic">Ileocolónica</option>
+                    <option value="perianal">Perianal</option>
+                `;
+                perianal.classList.remove('hidden');
+            }
+        }
+
+        async function saveProfile(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-profile');
+            btn.innerText = "Guardando..."; btn.disabled = true;
+
+            const isPerianal = document.querySelector('input[name="perianal"]:checked')?.value === 'yes';
+
+            const payload = {
+                birth_year: parseInt(document.getElementById('birth-year').value),
+                gender: document.getElementById('gender').value,
+                diagnosis: document.getElementById('diagnosis').value,
+                extent: document.getElementById('extent').value,
+                diagnosis_year: parseInt(document.getElementById('diagnosis-year').value),
+                has_perianal: isPerianal
+            };
+
+            try {
+                const { error } = await db
+                    .from('patients')
+                    .update(payload)
+                    .eq('id', app.patientDbId);
+
+                if (error) throw error;
+
+                // Actualizar estado local
+                app.profile = {
+                    birthYear: payload.birth_year,
+                    gender: payload.gender,
+                    diagnosis: payload.diagnosis,
+                    extent: payload.extent,
+                    diagnosisYear: payload.diagnosis_year,
+                    perianal: payload.has_perianal
+                };
+
+                updateDashboard();
+                closeProfileModal();
+                alert('Perfil guardado en la nube');
+
+            } catch (err) {
+                alert('Error al guardar: ' + err.message);
+            } finally {
+                btn.innerText = "Guardar en la nube"; btn.disabled = false;
+            }
+        }
+
+        // ==========================================
+        // MEDICACIONES (SUPABASE)
+        // ==========================================
+        function openMedicationModal(type) {
+            document.getElementById('med-type').value = type;
+            document.getElementById('medication-modal').classList.add('active');
+        }
+
+        function closeMedicationModal() {
+            document.getElementById('medication-modal').classList.remove('active');
+            document.getElementById('medication-form').reset();
+        }
+
+        async function saveMedication(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-med');
+            btn.innerText = "Guardando..."; btn.disabled = true;
+
+            const payload = {
+                patient_id: app.patientDbId,
+                medication_name: document.getElementById('med-name').value,
+                dose: parseFloat(document.getElementById('med-dose').value),
+                dose_unit: document.getElementById('med-dose-unit').value,
+                frequency: document.getElementById('med-frequency').value,
+                start_date: document.getElementById('med-start-date').value
+            };
+
+            try {
+                const { data, error } = await db
+                    .from('medications')
+                    .insert([payload])
+                    .select()
+                    .single();
+
+                if (error) throw error;
+
+                app.medications.push(data);
+                renderMedications();
+                closeMedicationModal();
+
+            } catch (err) {
+                alert('Error al guardar medicación: ' + err.message);
+            } finally {
+                btn.innerText = "Guardar Medicación"; btn.disabled = false;
+            }
+        }
+
+        async function deleteMedication(id) {
+            if(!confirm('¿Eliminar medicación?')) return;
+            
+            try {
+                const { error } = await db.from('medications').delete().eq('id', id);
+                if (error) throw error;
+                
+                app.medications = app.medications.filter(m => m.id !== id);
+                renderMedications();
+            } catch (err) {
+                alert('Error al borrar: ' + err.message);
+            }
+        }
+
+        function renderMedications() {
+            const mainList = document.getElementById('maintenance-list');
+            const bioList = document.getElementById('biologic-list');
+            
+            mainList.innerHTML = ''; bioList.innerHTML = '';
+            
+            if (app.medications.length === 0) {
+                mainList.innerHTML = '<li>Sin medicación registrada</li>';
+                bioList.innerHTML = '<li>Sin biológico registrado</li>';
+                return;
+            }
+            
+            app.medications.forEach(med => {
+                const html = `
+                    <li class="medication-item">
+                        <div class="medication-info">
+                            <div class="medication-name">${med.medication_name}</div>
+                            <div class="medication-details">
+                                ${med.dose}${med.dose_unit} • ${med.frequency}<br>
+                                Desde: ${new Date(med.start_date).toLocaleDateString()}
+                            </div>
+                        </div>
+                        <button class="btn btn-error btn-small" onclick="deleteMedication('${med.id}')">X</button>
+                    </li>
+                `;
+                // Para este MVP, lo metemos en mantenimiento (luego se puede filtrar mejor)
+                mainList.innerHTML += html;
+            });
+        }
+
+        // ==========================================
+        // SCORES (SUPABASE)
+        // ==========================================
+        async function submitMayoScore(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-mayo');
+            btn.innerText = "Guardando..."; btn.disabled = true;
+
+            const stools = parseInt(document.querySelector('input[name="mayo-stools"]:checked').value);
+            const blood = parseInt(document.querySelector('input[name="mayo-blood"]:checked').value);
+            const total = stools + blood;
+
+            try {
+                const { data, error } = await db
+                    .from('activity_scores')
+                    .insert([{
+                        patient_id: app.patientDbId,
+                        score_type: 'mayo',
+                        total_score: total,
+                        details: { stools, blood },
+                        recorded_at: new Date().toISOString()
+                    }])
+                    .select()
+                    .single();
+
+                if (error) throw error;
+
+                app.scores.unshift(data); // Añadir al principio
+                renderScoresHistory();
+                updateDashboard();
+                alert(`Score Mayo guardado: ${total}/6`);
+                
+            } catch (err) {
+                alert('Error al guardar score: ' + err.message);
+            } finally {
+                btn.innerText = "Guardar Score Mayo"; btn.disabled = false;
+            }
+        }
+
+        async function submitHBIScore(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-hbi');
+            btn.innerText = "Guardando..."; btn.disabled = true;
+
+            const wellbeing = parseInt(document.querySelector('input[name="hbi-wellbeing"]:checked').value);
+            const pain = parseInt(document.querySelector('input[name="hbi-pain"]:checked').value);
+            const stools = parseInt(document.querySelector('input[name="hbi-stools"]').value);
+            const mass = parseInt(document.querySelector('input[name="hbi-mass"]:checked').value);
+            const complications = Array.from(document.querySelectorAll('input[name="hbi-complications"]:checked')).length;
+            
+            const total = wellbeing + pain + stools + mass + complications;
+
+            try {
+                const { data, error } = await db
+                    .from('activity_scores')
+                    .insert([{
+                        patient_id: app.patientDbId,
+                        score_type: 'hbi',
+                        total_score: total,
+                        details: { wellbeing, pain, stools, mass, complications },
+                        recorded_at: new Date().toISOString()
+                    }])
+                    .select()
+                    .single();
+
+                if (error) throw error;
+
+                app.scores.unshift(data);
+                renderScoresHistory();
+                updateDashboard();
+                alert(`Score HBI guardado: ${total}`);
+                
+            } catch (err) {
+                alert('Error al guardar HBI: ' + err.message);
+            } finally {
+                btn.innerText = "Guardar Score HBI"; btn.disabled = false;
+            }
+        }
+
+        function renderScoresHistory() {
+            const history = document.getElementById('scores-history');
+            if (app.scores.length === 0) {
+                history.innerHTML = '<p>Sin scores registrados en la nube</p>';
+                return;
+            }
+            
+            history.innerHTML = app.scores
+                .slice(0, 10)
+                .map(s => {
+                    const dateStr = new Date(s.recorded_at).toLocaleDateString('es-ES');
+                    return `
+                    <div class="card">
+                        <p><strong>${s.score_type === 'mayo' ? 'Mayo' : 'HBI'}:</strong> ${dateStr}</p>
+                        <p>Puntuación: <span class="score-badge ${getScoreBadgeClass(s)}">${s.total_score}</span></p>
+                    </div>
+                `}).join('');
+        }
+
+        function getScoreBadgeClass(score) {
+            if (score.score_type === 'mayo') {
+                if (score.total_score <= 1) return 'score-remission';
+                if (score.total_score <= 4) return 'score-mild';
+                return 'score-severe';
+            } else {
+                if (score.total_score < 5) return 'score-remission';
+                if (score.total_score <= 7) return 'score-mild';
+                if (score.total_score <= 16) return 'score-moderate';
+                return 'score-severe';
+            }
+        }
+
+        // ==========================================
+        // IBDQ-9 (SUPABASE)
+        // ==========================================
+        function initIBDQ() {
+            const items = [
+                "Deposiciones blandas/líquidas", "Fatiga", "Bienestar general", 
+                "Límite actividades", "Preocupación enfermedad", "Dolor abdominal", 
+                "Estado de ánimo", "Vida social", "Satisfacción tratamiento"
+            ];
+            
+            let html = '';
+            items.forEach((text, i) => {
+                html += `
+                    <div class="form-group">
+                        <label>${i+1}. ${text} (1-Mal, 7-Bien)</label>
+                        <select name="ibdq-${i+1}" required>
+                            <option value="">Selecciona nota...</option>
+                            ${[1,2,3,4,5,6,7].map(v => `<option value="${v}">${v}</option>`).join('')}
+                        </select>
+                    </div>`;
+            });
+            document.getElementById('ibdq-items').innerHTML = html;
+        }
+
+        async function submitIBDQScore(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-ibdq');
+            btn.innerText = "Guardando..."; btn.disabled = true;
+
+            let total = 0;
+            let itemsArr = [];
+            for (let i = 1; i <= 9; i++) {
+                const val = parseInt(document.querySelector(`select[name="ibdq-${i}"]`).value);
+                total += val;
+                itemsArr.push(val);
+            }
+            
+            try {
+                const { data, error } = await db
+                    .from('ibdq_scores')
+                    .insert([{
+                        patient_id: app.patientDbId,
+                        total_score: total,
+                        items: itemsArr,
+                        recorded_at: new Date().toISOString()
+                    }])
+                    .select()
+                    .single();
+
+                if (error) throw error;
+                
+                app.ibdq.unshift(data);
+                updateDashboard();
+                alert(`Cuestionario guardado en la nube. Puntuación: ${total}/63`);
+                
+            } catch (err) {
+                alert('Error al guardar IBDQ: ' + err.message);
+            } finally {
+                btn.innerText = "Guardar Cuestionario"; btn.disabled = false;
+            }
+        }
+
+        // ==========================================
+        // UTILIDADES Y UI
+        // ==========================================
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (tabName === 'scores') updateScoreDisplay();
+        }
+
+        function updateScoreDisplay() {
+            if (!app.profile || !app.profile.diagnosis) {
+                document.getElementById('score-mayo').classList.add('hidden');
+                document.getElementById('score-hbi').classList.add('hidden');
+                return;
+            }
+            
+            if (app.profile.diagnosis === 'UC') {
+                document.getElementById('score-mayo').classList.remove('hidden');
+                document.getElementById('score-hbi').classList.add('hidden');
+            } else {
+                document.getElementById('score-mayo').classList.add('hidden');
+                document.getElementById('score-hbi').classList.remove('hidden');
+            }
+        }
+
+        function updateDashboard() {
+            const msg = document.getElementById('welcome-msg');
+            const summary = document.getElementById('profile-summary');
+            
+            if (app.profile && app.profile.diagnosis) {
+                const age = new Date().getFullYear() - app.profile.birthYear;
+                const diagName = app.profile.diagnosis === 'UC' ? 'Colitis Ulcerosa' : 'Enfermedad de Crohn';
+                msg.textContent = `Panel del Paciente`;
+                summary.textContent = `${age} años • ${diagName} • Diagnóstico: ${app.profile.diagnosisYear}`;
+            } else {
+                msg.textContent = 'Completa tu perfil clínico';
+                summary.textContent = 'Pulsa el botón de abajo para empezar tu seguimiento';
+            }
+
+            // Estadísticas desde la nube
+            if (app.scores.length > 0) {
+                document.getElementById('last-score-stat').textContent = app.scores[0].total_score;
+            }
+            if (app.ibdq.length > 0) {
+                document.getElementById('quality-stat').textContent = app.ibdq[0].total_score;
+            }
+            
+            updateScoreDisplay();
+        }
+    </script>
+</body>
+</html>
